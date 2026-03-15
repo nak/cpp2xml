@@ -1,13 +1,13 @@
 """XML generator for parsed C++ headers."""
 
-import os
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 
+import tomli_w
 from .parser import (
     ParsedHeader, Function, Struct, Class, Template,
-    Parameter, Field, Enum, Union, Operator, Friend
+    Parameter, Field, Enum, Union, Operator, Friend, Variable
 )
 
 
@@ -59,6 +59,8 @@ class XmlGenerator:
             field_elem.set("mutable", "true")
         if field.is_const:
             field_elem.set("const", "true")
+        if field.is_constexpr:
+            field_elem.set("constexpr", "true")
         if field.is_volatile:
             field_elem.set("volatile", "true")
 
@@ -83,6 +85,9 @@ class XmlGenerator:
 
         func_elem.set("name", func.name)
         func_elem.set("return_type", func.return_type)
+
+        if func.is_variadic:
+            func_elem.set("variadic", "true")
 
         if func.namespace:
             func_elem.set("namespace", func.namespace)
@@ -339,6 +344,31 @@ class XmlGenerator:
 
         return friend_elem
 
+    def _create_variable_element(self, var: Variable) -> ET.Element:
+        """Create XML element for a global variable."""
+        var_elem = ET.Element("variable")
+        var_elem.set("name", var.name)
+        var_elem.set("type", var.type_name)
+
+        if var.is_const:
+            var_elem.set("const", "true")
+        if var.is_constexpr:
+            var_elem.set("constexpr", "true")
+        if var.is_static:
+            var_elem.set("static", "true")
+        if var.is_extern:
+            var_elem.set("extern", "true")
+        if var.is_volatile:
+            var_elem.set("volatile", "true")
+
+        if var.namespace:
+            var_elem.set("namespace", var.namespace)
+
+        if var.location:
+            var_elem.set("location", var.location)
+
+        return var_elem
+
     def _prettify_xml(self, elem: ET.Element) -> str:
         """Return a pretty-printed XML string."""
         rough_string = ET.tostring(elem, encoding='unicode')
@@ -404,6 +434,12 @@ class XmlGenerator:
             for operator in parsed_header.operators:
                 operators_elem.append(self._create_operator_element(operator))
 
+        # Add variables
+        if parsed_header.variables:
+            variables_elem = ET.SubElement(root, "variables")
+            for var in parsed_header.variables:
+                variables_elem.append(self._create_variable_element(var))
+
         return self._prettify_xml(root)
 
     def write_xml(self, pkg: str, parsed_header: ParsedHeader):
@@ -430,12 +466,47 @@ class XmlGenerator:
 
         print(f"Generated: {output_path}")
 
-    def generate_all(self, parsed_header_mapping: dict[str, list[ParsedHeader]]):
+    def generate_package_manifest(self, include_path_to_package: dict[str, str]):
+        """
+        Generate a TOML manifest file mapping packages to include paths.
+
+        Args:
+            include_path_to_package: Dictionary mapping include-paths to package names
+        """
+        manifest_path = self.output_dir / "package_manifest.toml"
+
+        # Create manifest structure
+        manifest = {
+            "packages": {}
+        }
+
+        # Group include paths by package (supports multiple paths per package)
+        package_to_paths: dict[str, list[str]] = {}
+        for include_path, package in include_path_to_package.items():
+            if package not in package_to_paths:
+                package_to_paths[package] = []
+            package_to_paths[package].append(str(include_path))
+
+        # Build manifest with arrays of include paths
+        for package, paths in package_to_paths.items():
+            manifest["packages"][package] = {
+                "include_paths": paths,
+                "xml_output_dir": str(self.output_dir / package)
+            }
+
+        # Write TOML file
+        with open(manifest_path, 'wb') as f:
+            tomli_w.dump(manifest, f)
+
+        print(f"Generated package manifest: {manifest_path}")
+
+    def generate_all(self, parsed_header_mapping: dict[str, list[ParsedHeader]], include_path_to_package: dict[str, str] | None = None):
         """
         Generate XML files for all parsed headers.
 
         Args:
-            parsed_headers: List of ParsedHeader objects
+            parsed_header_mapping: Dictionary mapping package names to lists of ParsedHeader objects
+            include_path_to_package: Optional mapping of include paths to package names for manifest generation
         """
         for pkg, parsed_headers in parsed_header_mapping.items():
             for parsed_header in parsed_headers:
@@ -443,3 +514,7 @@ class XmlGenerator:
                     self.write_xml(pkg, parsed_header)
                 except Exception as e:
                     print(f"Error generating XML for {parsed_header.file_path}: {e}")
+
+        # Generate package manifest if mapping provided
+        if include_path_to_package:
+            self.generate_package_manifest(include_path_to_package)

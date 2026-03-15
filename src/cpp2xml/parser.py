@@ -30,6 +30,7 @@ class Function:
     is_const: bool = False
     is_volatile: bool = False
     is_virtual: bool = False
+    is_variadic: bool = False
     access_specifier: str | None = None  # public, private, protected
     namespace: str | None = None
     location: str | None = None
@@ -44,6 +45,7 @@ class Field:
     is_static: bool = False
     is_mutable: bool = False
     is_const: bool = False
+    is_constexpr: bool = False
     is_volatile: bool = False
 
 
@@ -142,6 +144,20 @@ class Friend:
 
 
 @dataclass
+class Variable:
+    """Represents a global variable declaration."""
+    name: str
+    type_name: str
+    is_const: bool = False
+    is_constexpr: bool = False
+    is_static: bool = False
+    is_extern: bool = False
+    is_volatile: bool = False
+    namespace: str | None = None
+    location: str | None = None
+
+
+@dataclass
 class ParsedHeader:
     """Represents the parsed content of a header file."""
     file_path: str
@@ -154,6 +170,7 @@ class ParsedHeader:
     enums: list[Enum] = field(default_factory=list)
     unions: list[Union] = field(default_factory=list)
     operators: list[Operator] = field(default_factory=list)
+    variables: list[Variable] = field(default_factory=list)
 
 
 class CppParser:
@@ -293,6 +310,7 @@ class CppParser:
             is_const=cursor.is_const_method() if is_method else False,
             is_volatile=self._is_volatile_method(cursor) if is_method else False,
             is_virtual=cursor.is_virtual_method() if is_method else False,
+            is_variadic=cursor.type.is_function_variadic(),
             access_specifier=self._get_access_specifier(cursor) if is_method else None,
             namespace=self._get_namespace(cursor) if not is_method else None,
             location=f"{cursor.location.line}:{cursor.location.column}"
@@ -307,7 +325,30 @@ class CppParser:
             is_static=cursor.storage_class == clang.cindex.StorageClass.STATIC,
             is_mutable=self._is_mutable_field(cursor),
             is_const=self._is_const_qualified(cursor.type),
+            is_constexpr=self._is_constexpr(cursor),
             is_volatile=self._is_volatile_qualified(cursor.type)
+        )
+
+    def _is_constexpr(self, cursor) -> bool:
+        """Check if a variable/function is constexpr by examining tokens."""
+        tokens = list(cursor.get_tokens())
+        for token in tokens:
+            if token.spelling == 'constexpr':
+                return True
+        return False
+
+    def _parse_variable(self, cursor) -> Variable:
+        """Parse a global variable declaration."""
+        return Variable(
+            name=cursor.spelling,
+            type_name=self._get_type_name(cursor.type),
+            is_const=self._is_const_qualified(cursor.type),
+            is_constexpr=self._is_constexpr(cursor),
+            is_static=cursor.storage_class == clang.cindex.StorageClass.STATIC,
+            is_extern=cursor.storage_class == clang.cindex.StorageClass.EXTERN,
+            is_volatile=self._is_volatile_qualified(cursor.type),
+            namespace=self._get_namespace(cursor),
+            location=f"{cursor.location.line}:{cursor.location.column}"
         )
 
     def _parse_struct_or_class(self, cursor, is_class: bool = False) -> Class | Struct:
@@ -589,6 +630,12 @@ class CppParser:
                 result.templates.append(template)
             # Don't traverse children - they're already handled in _parse_template
             return
+        elif cursor.kind == CursorKind.VAR_DECL:
+            # Global variable declaration (not class/struct static members)
+            # Static class/struct members are already handled in _parse_struct_or_class
+            parent = cursor.semantic_parent
+            if parent.kind not in (CursorKind.CLASS_DECL, CursorKind.STRUCT_DECL):
+                result.variables.append(self._parse_variable(cursor))
 
         # Continue traversing for nested declarations
         for child in cursor.get_children():

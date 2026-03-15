@@ -109,7 +109,9 @@ def main(argv: list[str] | None = None):
         parsed_headers = parser.parse_all_headers()
         if args.verbose:
             print(f"Found {len(parsed_headers)} header file(s)")
-        generator.generate_all(parsed_headers)
+
+        # Generate XML files and package manifest
+        generator.generate_all(parsed_headers, include_path_mapping)
         print(f"\nSuccessfully generated XML files in: {output_dir}")
         return 0
 

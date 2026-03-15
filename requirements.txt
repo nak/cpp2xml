@@ -1,1 +1,2 @@
 libclang>=16.0
+tomli-w>=1.0.0
