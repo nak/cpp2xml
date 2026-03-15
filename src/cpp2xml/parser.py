@@ -167,7 +167,7 @@ class CppParser:
             include_paths: List of include directories to search
             clang_args: Additional arguments to pass to clang
         """
-        self.include_paths = {Path(p).resolve(): mod for p, mod in include_paths.items()}
+        self.include_paths = {Path(p).resolve(): pkg for p, pkg in include_paths.items()}
         self.clang_args = clang_args or []
         self.index = clang.cindex.Index.create()
         self._anonymous_counter = 0
@@ -661,14 +661,14 @@ class CppParser:
         results: dict[str, list[ParsedHeader]] = {}
         header_extensions = {".h", ".hpp", ".hxx", ".hh"}
 
-        for include_path, mod in self.include_paths.items():
+        for include_path, pkg in self.include_paths.items():
             for root, _, files in os.walk(include_path):
                 for file in files:
                     if Path(file).suffix in header_extensions:
                         header_path = Path(root) / file
                         try:
                             parsed = self.parse_header(str(header_path))
-                            results.setdefault(mod, []).append(parsed)
+                            results.setdefault(pkg, []).append(parsed)
                         except Exception as e:
                             print(f"Error parsing {header_path}: {e}")
 

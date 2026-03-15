@@ -21,7 +21,7 @@ class TestXmlGenerator(unittest.TestCase):
     def setUpClass(cls):
         """Set up test fixtures."""
         cls.fixtures_dir = Path(__file__).parent / "fixtures" / "include"
-        cls.parser = CppParser(include_paths=[str(cls.fixtures_dir)])
+        cls.parser = CppParser(include_paths={str(cls.fixtures_dir): 'test_generator_pkg'})
 
     def setUp(self):
         """Set up test output directory."""
@@ -90,10 +90,8 @@ class TestXmlGenerator(unittest.TestCase):
         """Test that write_xml creates the output file."""
         header_path = self.fixtures_dir / "simple.h"
         result = self.parser.parse_header(str(header_path))
-
-        self.generator.write_xml(result)
-
-        output_file = Path(self.output_dir) / "simple.xml"
+        self.generator.write_xml('test_generator_pkg', result)
+        output_file = Path(self.output_dir) / 'test_generator_pkg' / "simple.xml"
         self.assertTrue(output_file.exists())
 
     def test_output_directory_structure(self):
@@ -101,9 +99,9 @@ class TestXmlGenerator(unittest.TestCase):
         header_path = self.fixtures_dir / "subdir" / "nested.h"
         result = self.parser.parse_header(str(header_path))
 
-        self.generator.write_xml(result)
+        self.generator.write_xml('test_generator_pkg', result)
 
-        output_file = Path(self.output_dir) / "subdir" / "nested.xml"
+        output_file = Path(self.output_dir) / 'test_generator_pkg' / "subdir" / "nested.xml"
         self.assertTrue(output_file.exists())
 
     def test_xml_is_valid(self):
@@ -111,8 +109,8 @@ class TestXmlGenerator(unittest.TestCase):
         header_path = self.fixtures_dir / "simple.h"
         result = self.parser.parse_header(str(header_path))
 
-        self.generator.write_xml(result)
-        output_file = Path(self.output_dir) / "simple.xml"
+        self.generator.write_xml('test_generator_pkg', result)
+        output_file = Path(self.output_dir) / 'test_generator_pkg' /"simple.xml"
 
         # Try to parse the XML
         tree = ET.parse(output_file)

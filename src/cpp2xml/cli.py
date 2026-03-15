@@ -80,10 +80,10 @@ def main(argv: list[str] | None = None):
                   " the given include path")
             return 1
         true_path, target_module = include_path.split(":", 1)
-        if not Path(include_path).exists():
+        if not Path(true_path).exists():
             print(f"Error: Include path does not exist: {include_path}", file=sys.stderr)
             return 1
-        include_path_mapping[include_path] = target_module
+        include_path_mapping[true_path] = target_module
 
     # Create output directory
     output_dir = Path(args.output_dir)

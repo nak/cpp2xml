@@ -17,7 +17,7 @@ class TestCppParser(unittest.TestCase):
     def setUpClass(cls):
         """Set up test fixtures."""
         cls.fixtures_dir = Path(__file__).parent / "fixtures" / "include"
-        cls.parser = CppParser(include_paths=[str(cls.fixtures_dir)])
+        cls.parser = CppParser(include_paths={str(cls.fixtures_dir): 'test_cpp_parse_pkg'})
 
     def test_parse_simple_functions(self):
         """Test parsing simple functions."""
@@ -133,16 +133,17 @@ class TestCppParser(unittest.TestCase):
         self.assertEqual(result.relative_path, "subdir/nested.h")
 
     def test_parse_all_headers(self):
-        """Test parsing all headers in include paths."""
+        """Test parsing all headers in given include paths."""
         results = self.parser.parse_all_headers()
 
         # Should find all header files
         self.assertGreater(len(results), 0)
 
         # Check that we got the expected headers
-        relative_paths = [r.relative_path for r in results]
-        self.assertIn("simple.h", relative_paths)
-        self.assertIn("classes.h", relative_paths)
+        relative_paths = {pkg: [r.relative_path for r in rs] for pkg, rs in results.items()}
+        assert 'test_cpp_parse_pkg' in relative_paths
+        self.assertIn("simple.h", relative_paths['test_cpp_parse_pkg'])
+        self.assertIn("classes.h", relative_paths['test_cpp_parse_pkg'])
 
     def test_parse_namespaces(self):
         """Test parsing namespace information."""

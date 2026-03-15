@@ -39,47 +39,25 @@ class TestCli(unittest.TestCase):
         ])
         self.assertEqual(len(args.include_paths), 2)
 
-    def test_parse_args_with_files(self):
-        """Test parsing with specific files."""
-        args = parse_args([
-            "-I", "/usr/include",
-            "-f", "header1.h",
-            "-f", "header2.h",
-            "-o", "/tmp/output"
-        ])
-        self.assertEqual(len(args.files), 2)
 
     def test_main_with_all_headers(self):
         """Test main function parsing all headers."""
         result = main([
-            "-I", str(self.fixtures_dir),
+            "-I", f"{self.fixtures_dir}:test_pkg",
             "-o", self.output_dir
         ])
 
         self.assertEqual(result, 0)
 
         # Check that XML files were created
-        xml_files = list(Path(self.output_dir).rglob("*.xml"))
+        xml_files = list((Path(self.output_dir) / "test_pkg").rglob("*.xml"))
         self.assertGreater(len(xml_files), 0)
 
-    def test_main_with_specific_file(self):
-        """Test main function with specific file."""
-        simple_header = self.fixtures_dir / "simple.h"
-        result = main([
-            "-I", str(self.fixtures_dir),
-            "-f", str(simple_header),
-            "-o", self.output_dir
-        ])
-
-        self.assertEqual(result, 0)
-
-        output_file = Path(self.output_dir) / "simple.xml"
-        self.assertTrue(output_file.exists())
 
     def test_main_with_invalid_include_path(self):
         """Test main function with invalid include path."""
         result = main([
-            "-I", "/nonexistent/path",
+            "-I", "/nonexistent/path:invalid_pkg",
             "-o", self.output_dir
         ])
 

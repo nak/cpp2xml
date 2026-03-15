@@ -18,7 +18,7 @@ class TestEnums(unittest.TestCase):
     def setUpClass(cls):
         """Set up test fixtures."""
         cls.fixtures_dir = Path(__file__).parent / "fixtures" / "include"
-        cls.parser = CppParser(include_paths=[str(cls.fixtures_dir)])
+        cls.parser = CppParser(include_paths={'test_enums_pkg': str(cls.fixtures_dir)})
 
     def test_parse_enums(self):
         """Test parsing regular enums."""
@@ -67,7 +67,7 @@ class TestUnions(unittest.TestCase):
     def setUpClass(cls):
         """Set up test fixtures."""
         cls.fixtures_dir = Path(__file__).parent / "fixtures" / "include"
-        cls.parser = CppParser(include_paths=[str(cls.fixtures_dir)])
+        cls.parser = CppParser(include_paths={'test_unions_pkg': str(cls.fixtures_dir)})
 
     def test_parse_unions(self):
         """Test parsing union declarations."""
@@ -101,7 +101,7 @@ class TestOperators(unittest.TestCase):
     def setUpClass(cls):
         """Set up test fixtures."""
         cls.fixtures_dir = Path(__file__).parent / "fixtures" / "include"
-        cls.parser = CppParser(include_paths=[str(cls.fixtures_dir)])
+        cls.parser = CppParser(include_paths={'test_operators_pkg':str(cls.fixtures_dir)})
 
     def test_parse_member_operators(self):
         """Test parsing member operator overloads."""
@@ -140,7 +140,7 @@ class TestVariadicTemplates(unittest.TestCase):
     def setUpClass(cls):
         """Set up test fixtures."""
         cls.fixtures_dir = Path(__file__).parent / "fixtures" / "include"
-        cls.parser = CppParser(include_paths=[str(cls.fixtures_dir)])
+        cls.parser = CppParser(include_paths={'test_variadic_tmplt_pkg': str(cls.fixtures_dir)})
 
     def test_parse_variadic_templates(self):
         """Test parsing variadic templates."""
@@ -163,7 +163,7 @@ class TestNestedTypes(unittest.TestCase):
     def setUpClass(cls):
         """Set up test fixtures."""
         cls.fixtures_dir = Path(__file__).parent / "fixtures" / "include"
-        cls.parser = CppParser(include_paths=[str(cls.fixtures_dir)])
+        cls.parser = CppParser(include_paths={'test_nested_types_pkg': str(cls.fixtures_dir)})
 
     def test_parse_nested_classes(self):
         """Test parsing nested classes."""
@@ -211,7 +211,7 @@ class TestFriends(unittest.TestCase):
     def setUpClass(cls):
         """Set up test fixtures."""
         cls.fixtures_dir = Path(__file__).parent / "fixtures" / "include"
-        cls.parser = CppParser(include_paths=[str(cls.fixtures_dir)])
+        cls.parser = CppParser(include_paths={'test_friends_pkg': str(cls.fixtures_dir)})
 
     def test_parse_friend_declarations(self):
         """Test parsing friend declarations."""
@@ -233,7 +233,7 @@ class TestDefaultParameters(unittest.TestCase):
     def setUpClass(cls):
         """Set up test fixtures."""
         cls.fixtures_dir = Path(__file__).parent / "fixtures" / "include"
-        cls.parser = CppParser(include_paths=[str(cls.fixtures_dir)])
+        cls.parser = CppParser(include_paths={'test_pkg': str(cls.fixtures_dir)})
 
     def test_parse_default_parameters(self):
         """Test parsing functions with default parameters."""
@@ -258,7 +258,7 @@ class TestXMLGenerationNewFeatures(unittest.TestCase):
     def setUpClass(cls):
         """Set up test fixtures."""
         cls.fixtures_dir = Path(__file__).parent / "fixtures" / "include"
-        cls.parser = CppParser(include_paths=[str(cls.fixtures_dir)])
+        cls.parser = CppParser(include_paths={str(cls.fixtures_dir): 'test_new_features_pkg'})
         cls.generator = XmlGenerator(output_dir="/tmp/test_xml")
 
     def test_enum_xml_generation(self):
