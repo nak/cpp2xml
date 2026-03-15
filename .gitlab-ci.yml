@@ -1,0 +1,153 @@
+stages:
+  - lint
+  - test
+  - build
+  - deploy
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  PYTHON_VERSION: "3.10"
+
+cache:
+  paths:
+    - .cache/pip
+    - .venv/
+
+# Default image for all jobs
+default:
+  image: python:${PYTHON_VERSION}
+  before_script:
+    - python --version
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pip install -e .
+
+# Lint stage - code quality checks
+lint:mypy:
+  stage: lint
+  script:
+    - pip install mypy
+    - mypy src/cpp2xml --ignore-missing-imports
+  allow_failure: true
+
+lint:flake8:
+  stage: lint
+  script:
+    - pip install flake8
+    - flake8 src/cpp2xml tests --max-line-length=120 --extend-ignore=E203,W503
+  allow_failure: true
+
+lint:black:
+  stage: lint
+  script:
+    - pip install black
+    - black --check src/cpp2xml tests
+  allow_failure: true
+
+# Test stage - run unit tests
+test:python3.10:
+  stage: test
+  image: python:3.10
+  before_script:
+    - apt-get update && apt-get install -y libclang-16-dev clang-16
+    - export LD_LIBRARY_PATH=/usr/lib/llvm-16/lib:$LD_LIBRARY_PATH
+    - python --version
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pip install -e .
+  script:
+    - python tests/run_tests.py
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+
+test:python3.11:
+  stage: test
+  image: python:3.11
+  before_script:
+    - apt-get update && apt-get install -y libclang-16-dev clang-16
+    - export LD_LIBRARY_PATH=/usr/lib/llvm-16/lib:$LD_LIBRARY_PATH
+    - python --version
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pip install -e .
+  script:
+    - python tests/run_tests.py
+  allow_failure: true
+
+test:python3.12:
+  stage: test
+  image: python:3.12
+  before_script:
+    - apt-get update && apt-get install -y libclang-16-dev clang-16
+    - export LD_LIBRARY_PATH=/usr/lib/llvm-16/lib:$LD_LIBRARY_PATH
+    - python --version
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pip install -e .
+  script:
+    - python tests/run_tests.py
+  allow_failure: true
+
+# Test with coverage reporting
+test:coverage:
+  stage: test
+  image: python:3.10
+  before_script:
+    - apt-get update && apt-get install -y libclang-16-dev clang-16
+    - export LD_LIBRARY_PATH=/usr/lib/llvm-16/lib:$LD_LIBRARY_PATH
+    - python --version
+    - pip install --upgrade pip
+    - pip install -r requirements.txt
+    - pip install -e .
+    - pip install coverage
+  script:
+    - coverage run -m unittest discover -s tests -p "test_*.py"
+    - coverage report
+    - coverage html
+  artifacts:
+    paths:
+      - htmlcov/
+    expire_in: 30 days
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+
+# Build stage - create distribution packages
+build:package:
+  stage: build
+  script:
+    - pip install build twine
+    - python -m build
+    - twine check dist/*
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 7 days
+  only:
+    - main
+    - tags
+
+# Deploy stage - publish to PyPI (only on tags)
+deploy:pypi:
+  stage: deploy
+  script:
+    - pip install twine
+    - twine upload dist/* -u __token__ -p $PYPI_TOKEN
+  only:
+    - tags
+  when: manual
+  needs:
+    - build:package
+  environment:
+    name: production
+    url: https://pypi.org/project/cpp2xml/
+
+# Deploy documentation (if applicable)
+deploy:pages:
+  stage: deploy
+  script:
+    - pip install sphinx sphinx-rtd-theme
+    - sphinx-build -b html docs public || echo "No docs directory found"
+  artifacts:
+    paths:
+      - public
+  only:
+    - main
+  allow_failure: true

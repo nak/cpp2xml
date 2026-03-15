@@ -28,7 +28,7 @@ pip install -e .
 ## Usage
 
 ```bash
-cpp2xml --include-path /path/to/headers --output-dir ./xml_output
+cpp2xml --include-path /path/to/headers:mypkg --output-dir ./xml_output
 ```
 
 ## Requirements
